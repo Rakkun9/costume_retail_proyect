@@ -1,0 +1,216 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Lavandería">
+  <div class="row g-3 mb-4 align-items-center">
+    <div class="col">
+      <h2 class="mb-0 fw-bold"><i class="bi bi-droplet me-2"></i>Gestión de Lavandería</h2>
+    </div>
+  </div>
+
+  <ul class="nav nav-tabs mb-4">
+    <li class="nav-item"><button class="nav-link active" data-tab="agregar">Agregar a Lista</button></li>
+    <li class="nav-item"><button class="nav-link" data-tab="ver-lista">Ver Lista Pendiente</button></li>
+    <li class="nav-item"><button class="nav-link" data-tab="enviar">Enviar a Lavandería</button></li>
+  </ul>
+
+  <!-- Agregar -->
+  <div id="tab-agregar" class="tab-content-panel">
+    <div class="card">
+      <div class="card-header bg-danger text-white">Registrar Prenda para Lavandería</div>
+      <div class="card-body">
+        <form id="formAgregarLavanderia" class="row g-3">
+          <div class="col-md-5">
+            <label class="form-label">Referencia de la Prenda *</label>
+            <input type="text" name="referencia" class="form-control" required placeholder="Ej: VEST-001" />
+          </div>
+          <div class="col-md-4 d-flex align-items-end">
+            <div class="form-check form-switch mt-2">
+              <input class="form-check-input" type="checkbox" name="prioridad" id="checkPrioridad" style="width: 2.5em; height: 1.5em;" />
+              <label class="form-check-label ms-2 fw-semibold" for="checkPrioridad">
+                <span class="text-danger"><i class="bi bi-lightning-fill me-1"></i>Prioridad alta</span>
+              </label>
+              <div class="text-muted small">La prenda irá al frente de la cola</div>
+            </div>
+          </div>
+          <div class="col-12 col-md-3 d-flex align-items-end">
+            <button type="submit" class="btn btn-danger w-100">
+              <i class="bi bi-plus-circle me-2"></i>Agregar a Lista
+            </button>
+          </div>
+        </form>
+        <div class="alert alert-warning small mt-3 mb-0">
+          <i class="bi bi-exclamation-triangle me-1"></i>
+          Al agregar una prenda a esta lista, su estado cambia a <strong>EN LAVANDERÍA</strong> y no podrá ser alquilada.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Ver Lista -->
+  <div id="tab-ver-lista" class="tab-content-panel d-none">
+    <div class="card">
+      <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
+        Prendas Pendientes de Envío
+        <button class="btn btn-sm btn-light" id="btnRefreshLista">
+          <i class="bi bi-arrow-clockwise"></i> Actualizar
+        </button>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Prioridad</th>
+                <th>Referencia</th>
+                <th>Nombre</th>
+                <th>Tipo</th>
+                <th>Talla</th>
+                <th>Fecha Registro</th>
+              </tr>
+            </thead>
+            <tbody id="tablaLavanderia">
+              <tr><td colspan="7" class="text-center text-muted py-3">Cargando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="text-muted small mt-2">
+      <i class="bi bi-info-circle me-1"></i>
+      Ver esta lista no envía las prendas. Use la pestaña "Enviar a Lavandería" para procesarlas.
+    </div>
+  </div>
+
+  <!-- Enviar -->
+  <div id="tab-enviar" class="tab-content-panel d-none">
+    <div class="card mb-3">
+      <div class="card-header bg-danger text-white">Enviar Prendas a Lavandería</div>
+      <div class="card-body">
+        <p class="text-muted">
+          Las prendas se enviarán respetando el orden de prioridad: primero las marcadas como <strong>alta prioridad</strong> y luego el resto en orden de registro (FIFO).
+        </p>
+        <form id="formEnviar" class="row g-3 align-items-end">
+          <div class="col-md-4">
+            <label class="form-label">Cantidad de prendas a enviar *</label>
+            <input type="number" name="cantidad" class="form-control" min="1" required placeholder="Ej: 5" />
+          </div>
+          <div class="col-auto">
+            <button type="submit" class="btn btn-danger">
+              <i class="bi bi-send me-2"></i>Enviar a Lavandería
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+    <div id="resultadoEnvio"></div>
+  </div>
+</Layout>
+
+<script>
+  document.querySelectorAll('[data-tab]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-tab]').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content-panel').forEach(p => p.classList.add('d-none'));
+      btn.classList.add('active');
+      document.getElementById(`tab-${btn.dataset.tab}`).classList.remove('d-none');
+      if (btn.dataset.tab === 'ver-lista') loadLista();
+    });
+  });
+
+  // Agregar
+  document.getElementById('formAgregarLavanderia').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const referencia = e.target.querySelector('[name="referencia"]').value.trim();
+    const prioridad = e.target.querySelector('[name="prioridad"]').checked;
+    try {
+      const res = await fetch(`${window.API_URL}/lavanderia`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ referencia, prioridad }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.message || 'Error al registrar');
+      window.showToast(`<i class="bi bi-check-circle me-1"></i>Prenda <strong>${referencia}</strong> agregada a la lista de lavandería${prioridad ? ' con <strong>alta prioridad</strong>' : ''}`);
+      e.target.reset();
+    } catch (err) {
+      window.showToast(`<i class="bi bi-x-circle me-1"></i>${err.message}`, 'danger');
+    }
+  });
+
+  // Ver lista
+  async function loadLista() {
+    try {
+      const res = await fetch(`${window.API_URL}/lavanderia`);
+      const items = await res.json();
+      const tbody = document.getElementById('tablaLavanderia');
+      if (!items.length) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-3"><i class="bi bi-inbox me-1"></i>No hay prendas en lista de lavandería</td></tr>';
+        return;
+      }
+      tbody.innerHTML = items.map((item, i) => `
+        <tr class="${item.prioridad ? 'table-danger' : ''}">
+          <td>${i + 1}</td>
+          <td>${item.prioridad ? '<span class="badge bg-danger"><i class="bi bi-lightning-fill me-1"></i>Alta</span>' : '<span class="badge bg-secondary">Normal</span>'}</td>
+          <td><code>${item.prenda?.referencia || '—'}</code></td>
+          <td>${item.prenda?.nombre || '—'}</td>
+          <td>${item.prenda?.tipo || '—'}</td>
+          <td><span class="badge bg-secondary">${item.prenda?.talla || '—'}</span></td>
+          <td>${new Date(item.fecha_registro).toLocaleString('es-CO')}</td>
+        </tr>`).join('');
+    } catch {
+      window.showToast('Error cargando lista de lavandería', 'danger');
+    }
+  }
+  document.getElementById('btnRefreshLista').addEventListener('click', loadLista);
+
+  // Enviar
+  document.getElementById('formEnviar').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const cantidad = parseInt(e.target.querySelector('[name="cantidad"]').value);
+    try {
+      const res = await fetch(`${window.API_URL}/lavanderia/enviar`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cantidad }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.message || 'Error al enviar');
+
+      const prendas = json.prendas_enviadas || [];
+      document.getElementById('resultadoEnvio').innerHTML = `
+        <div class="card border-danger">
+          <div class="card-header bg-danger text-white">
+            <i class="bi bi-check-circle me-2"></i>${json.mensaje}
+          </div>
+          <div class="card-body">
+            <h6 class="mb-3">Prendas enviadas:</h6>
+            <div class="table-responsive">
+              <table class="table table-sm">
+                <thead><tr><th>#</th><th>Prioridad</th><th>Referencia</th><th>Nombre</th><th>Tipo</th><th>Talla</th><th>Fecha Registro</th></tr></thead>
+                <tbody>
+                  ${prendas.map((item, i) => `
+                    <tr>
+                      <td>${i + 1}</td>
+                      <td>${item.prioridad ? '<span class="badge bg-danger">Alta</span>' : '<span class="badge bg-secondary">Normal</span>'}</td>
+                      <td><code>${item.prenda?.referencia || '—'}</code></td>
+                      <td>${item.prenda?.nombre || '—'}</td>
+                      <td>${item.prenda?.tipo || '—'}</td>
+                      <td>${item.prenda?.talla || '—'}</td>
+                      <td>${new Date(item.fecha_registro).toLocaleString('es-CO')}</td>
+                    </tr>`).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>`;
+      window.showToast(`<i class="bi bi-check-circle me-1"></i>${json.mensaje}`);
+      e.target.reset();
+    } catch (err) {
+      window.showToast(`<i class="bi bi-x-circle me-1"></i>${err.message}`, 'danger');
+      document.getElementById('resultadoEnvio').innerHTML = `<div class="alert alert-danger">${err.message}</div>`;
+    }
+  });
+</script>

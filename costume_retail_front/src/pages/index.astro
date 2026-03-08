@@ -1,11 +1,130 @@
 ---
-import Welcome from '../components/Welcome.astro';
 import Layout from '../layouts/Layout.astro';
-
-// Welcome to Astro! Wondering what to do next? Check out the Astro documentation at https://docs.astro.build
-// Don't want to use any of this? Delete everything in this file, the `assets`, `components`, and `layouts` directories, and start fresh.
 ---
 
-<Layout>
-	<Welcome />
+<Layout title="Inicio">
+  <div class="row g-3 mb-4 align-items-center">
+    <div class="col">
+      <h2 class="mb-0 fw-bold"><i class="bi bi-house me-2"></i>Panel Principal</h2>
+      <p class="text-muted mb-0">Sistema de alquiler de prendas de disfraz</p>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-md-6 col-lg-4">
+      <a href="/prendas" class="text-decoration-none">
+        <div class="card h-100 border-0">
+          <div class="card-body p-4">
+            <div class="d-flex align-items-center mb-3">
+              <div class="rounded-circle bg-primary bg-opacity-10 p-4 me-4">
+                <i class="bi bi-bag-fill text-primary fs-4"></i>
+              </div>
+              <div>
+                <h5 class="mb-0 text-dark">Prendas</h5>
+                <small class="text-muted">Gestión de inventario</small>
+              </div>
+            </div>
+            <ul class="text-muted small mb-0 ps-3">
+              <li>Registrar nueva prenda</li>
+              <li>Consultar por talla</li>
+              <li>Ver todas las prendas</li>
+            </ul>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <div class="col-md-6 col-lg-4">
+      <a href="/clientes" class="text-decoration-none">
+        <div class="card h-100 border-0">
+          <div class="card-body p-4">
+            <div class="d-flex align-items-center mb-3">
+              <div class="rounded-circle bg-success bg-opacity-10 p-4 me-4">
+                <i class="bi bi-people-fill text-success fs-4"></i>
+              </div>
+              <div>
+                <h5 class="mb-0 text-dark">Clientes</h5>
+                <small class="text-muted">Gestión de clientes</small>
+              </div>
+            </div>
+            <ul class="text-muted small mb-0 ps-3">
+              <li>Registrar nuevo cliente</li>
+              <li>Buscar por identificación</li>
+              <li>Ver todos los clientes</li>
+            </ul>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <div class="col-md-6 col-lg-4">
+      <a href="/empleados" class="text-decoration-none">
+        <div class="card h-100 border-0">
+          <div class="card-body p-4">
+            <div class="d-flex align-items-center mb-3">
+              <div class="rounded-circle bg-warning bg-opacity-10 p-4 me-4">
+                <i class="bi bi-person-badge-fill text-warning fs-4"></i>
+              </div>
+              <div>
+                <h5 class="mb-0 text-dark">Empleados</h5>
+                <small class="text-muted">Gestión de personal</small>
+              </div>
+            </div>
+            <ul class="text-muted small mb-0 ps-3">
+              <li>Registrar nuevo empleado</li>
+              <li>Buscar por identificación</li>
+              <li>Ver todos los empleados</li>
+            </ul>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <div class="col-md-6 col-lg-4">
+      <a href="/servicios" class="text-decoration-none">
+        <div class="card h-100 border-0">
+          <div class="card-body p-4">
+            <div class="d-flex align-items-center mb-3">
+              <div class="rounded-circle bg-info bg-opacity-10 p-4 me-4">
+                <i class="bi bi-calendar-check-fill text-info fs-4"></i>
+              </div>
+              <div>
+                <h5 class="mb-0 text-dark">Servicios de Alquiler</h5>
+                <small class="text-muted">Gestión de alquileres</small>
+              </div>
+            </div>
+            <ul class="text-muted small mb-0 ps-3">
+              <li>Registrar servicio de alquiler</li>
+              <li>Consultar por número</li>
+              <li>Consultar por cliente o fecha</li>
+            </ul>
+          </div>
+        </div>
+      </a>
+    </div>
+
+    <div class="col-md-6 col-lg-4">
+      <a href="/lavanderia" class="text-decoration-none">
+        <div class="card h-100 border-0">
+          <div class="card-body p-4">
+            <div class="d-flex align-items-center mb-3">
+              <div class="rounded-circle bg-danger bg-opacity-10 p-4 me-4">
+                <i class="bi bi-droplet-fill text-danger fs-4"></i>
+              </div>
+              <div>
+                <h5 class="mb-0 text-dark">Lavandería</h5>
+                <small class="text-muted">Cola de lavandería</small>
+              </div>
+            </div>
+            <ul class="text-muted small mb-0 ps-3">
+              <li>Agregar prenda a lavandería</li>
+              <li>Ver lista pendiente</li>
+              <li>Enviar prendas (prioridad)</li>
+            </ul>
+          </div>
+        </div>
+      </a>
+    </div>
+  </div>
 </Layout>
+

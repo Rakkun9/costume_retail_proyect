@@ -1,0 +1,171 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Clientes">
+  <div class="row g-3 mb-4 align-items-center">
+    <div class="col">
+      <h2 class="mb-0 fw-bold"><i class="bi bi-people me-2"></i>Gestión de Clientes</h2>
+    </div>
+  </div>
+
+  <ul class="nav nav-tabs mb-4">
+    <li class="nav-item"><button class="nav-link active" data-tab="registrar">Registrar</button></li>
+    <li class="nav-item"><button class="nav-link" data-tab="listar">Listar Todos</button></li>
+    <li class="nav-item"><button class="nav-link" data-tab="buscar">Buscar por ID</button></li>
+  </ul>
+
+  <!-- Registrar -->
+  <div id="tab-registrar" class="tab-content-panel">
+    <div class="card">
+      <div class="card-header bg-success text-white">Nuevo Cliente</div>
+      <div class="card-body">
+        <form id="formCliente" class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label">N° Identificación *</label>
+            <input type="text" name="numero_identificacion" class="form-control" required placeholder="CC, NIT, Pasaporte..." />
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Nombre *</label>
+            <input type="text" name="nombre" class="form-control" required />
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Apellido *</label>
+            <input type="text" name="apellido" class="form-control" required />
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Teléfono *</label>
+            <input type="tel" name="telefono" class="form-control" required placeholder="Ej: 3001234567" />
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Email</label>
+            <input type="email" name="email" class="form-control" placeholder="correo@ejemplo.com" />
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Dirección *</label>
+            <input type="text" name="direccion" class="form-control" required placeholder="Ej: Calle 10 # 20-30" />
+          </div>
+          <div class="col-12">
+            <button type="submit" class="btn btn-success">
+              <i class="bi bi-person-plus me-2"></i>Registrar Cliente
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Listar -->
+  <div id="tab-listar" class="tab-content-panel d-none">
+    <div class="card">
+      <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
+        Todos los Clientes
+        <button class="btn btn-sm btn-light" id="btnRefreshClientes"><i class="bi bi-arrow-clockwise"></i> Actualizar</button>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead>
+              <tr><th>Identificación</th><th>Nombre</th><th>Apellido</th><th>Teléfono</th><th>Email</th><th>Dirección</th></tr>
+            </thead>
+            <tbody id="tablaClientes"><tr><td colspan="6" class="text-center text-muted py-3">Cargando...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Buscar -->
+  <div id="tab-buscar" class="tab-content-panel d-none">
+    <div class="card mb-3">
+      <div class="card-body">
+        <div class="row g-2 align-items-end">
+          <div class="col-md-5">
+            <label class="form-label">Número de Identificación</label>
+            <input type="text" id="inputClienteId" class="form-control" placeholder="Ej: 123456789" />
+          </div>
+          <div class="col-auto">
+            <button class="btn btn-success" id="btnBuscarCliente">
+              <i class="bi bi-search me-1"></i>Buscar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="resultadoCliente"></div>
+  </div>
+</Layout>
+
+<script>
+  document.querySelectorAll('[data-tab]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-tab]').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content-panel').forEach(p => p.classList.add('d-none'));
+      btn.classList.add('active');
+      document.getElementById(`tab-${btn.dataset.tab}`).classList.remove('d-none');
+      if (btn.dataset.tab === 'listar') loadClientes();
+    });
+  });
+
+  document.getElementById('formCliente').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const data = Object.fromEntries(new FormData(e.target));
+    if (!data.email) delete data.email;
+    try {
+      const res = await fetch(`${window.API_URL}/clientes`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.message || 'Error al registrar');
+      window.showToast(`<i class="bi bi-check-circle me-1"></i>Cliente <strong>${json.nombre} ${json.apellido}</strong> registrado exitosamente`);
+      e.target.reset();
+    } catch (err) {
+      window.showToast(`<i class="bi bi-x-circle me-1"></i>${err.message}`, 'danger');
+    }
+  });
+
+  async function loadClientes() {
+    try {
+      const res = await fetch(`${window.API_URL}/clientes`);
+      const clientes = await res.json();
+      const tbody = document.getElementById('tablaClientes');
+      if (!clientes.length) { tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-3">No hay clientes registrados</td></tr>'; return; }
+      tbody.innerHTML = clientes.map(c => `
+        <tr>
+          <td><code>${c.numero_identificacion}</code></td>
+          <td>${c.nombre}</td>
+          <td>${c.apellido}</td>
+          <td>${c.telefono}</td>
+          <td>${c.email || '<span class="text-muted">—</span>'}</td>
+          <td>${c.direccion}</td>
+        </tr>`).join('');
+    } catch {
+      window.showToast('Error cargando clientes', 'danger');
+    }
+  }
+  document.getElementById('btnRefreshClientes').addEventListener('click', loadClientes);
+
+  document.getElementById('btnBuscarCliente').addEventListener('click', async () => {
+    const id = document.getElementById('inputClienteId').value.trim();
+    if (!id) return;
+    try {
+      const res = await fetch(`${window.API_URL}/clientes/${encodeURIComponent(id)}`);
+      const c = await res.json();
+      if (!res.ok) throw new Error(c.message);
+      document.getElementById('resultadoCliente').innerHTML = `
+        <div class="card">
+          <div class="card-header bg-light">Datos del Cliente</div>
+          <div class="card-body">
+            <div class="row g-3">
+              <div class="col-6 col-md-3"><small class="text-muted d-block">Identificación</small><strong>${c.numero_identificacion}</strong></div>
+              <div class="col-6 col-md-3"><small class="text-muted d-block">Nombre</small>${c.nombre}</div>
+              <div class="col-6 col-md-3"><small class="text-muted d-block">Apellido</small>${c.apellido}</div>
+              <div class="col-6 col-md-3"><small class="text-muted d-block">Teléfono</small>${c.telefono}</div>
+              <div class="col-6 col-md-3"><small class="text-muted d-block">Email</small>${c.email || '—'}</div>
+              <div class="col-md-6"><small class="text-muted d-block">Dirección</small>${c.direccion}</div>
+            </div>
+          </div>
+        </div>`;
+    } catch (err) {
+      document.getElementById('resultadoCliente').innerHTML = `<div class="alert alert-warning">${err.message}</div>`;
+    }
+  });
+</script>

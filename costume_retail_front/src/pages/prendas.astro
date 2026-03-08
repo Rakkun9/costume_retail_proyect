@@ -1,0 +1,234 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Prendas">
+  <div class="row g-3 mb-4 align-items-center">
+    <div class="col">
+      <h2 class="mb-0 fw-bold"><i class="bi bi-bag me-2"></i>Gestión de Prendas</h2>
+    </div>
+  </div>
+
+  <!-- Tabs -->
+  <ul class="nav nav-tabs mb-4" id="prendasTabs">
+    <li class="nav-item"><button class="nav-link active" data-tab="registrar">Registrar</button></li>
+    <li class="nav-item"><button class="nav-link" data-tab="listar">Listar Todas</button></li>
+    <li class="nav-item"><button class="nav-link" data-tab="talla">Consultar por Talla</button></li>
+    <li class="nav-item"><button class="nav-link" data-tab="referencia">Buscar por Referencia</button></li>
+  </ul>
+
+  <!-- Registrar -->
+  <div id="tab-registrar" class="tab-content-panel">
+    <div class="card">
+      <div class="card-header bg-primary text-white">Nueva Prenda</div>
+      <div class="card-body">
+        <form id="formPrenda" class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label">Referencia *</label>
+            <input type="text" name="referencia" class="form-control" required placeholder="Ej: VEST-001" />
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Nombre *</label>
+            <input type="text" name="nombre" class="form-control" required placeholder="Ej: Vestido de gala" />
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Tipo *</label>
+            <input type="text" name="tipo" class="form-control" required placeholder="Ej: Vestido, Traje, Disfraz" />
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Talla *</label>
+            <input type="text" name="talla" class="form-control" required placeholder="Ej: S, M, L, XL, 38" />
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Precio Alquiler *</label>
+            <div class="input-group">
+              <span class="input-group-text">$</span>
+              <input type="number" name="precio_alquiler" class="form-control" required min="0" step="0.01" placeholder="0.00" />
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Descripción</label>
+            <input type="text" name="descripcion" class="form-control" placeholder="Descripción opcional" />
+          </div>
+          <div class="col-12">
+            <button type="submit" class="btn btn-primary">
+              <i class="bi bi-plus-circle me-2"></i>Registrar Prenda
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Listar -->
+  <div id="tab-listar" class="tab-content-panel d-none">
+    <div class="card">
+      <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center">
+        Todas las Prendas
+        <button class="btn btn-sm btn-light" id="btnRefreshPrendas"><i class="bi bi-arrow-clockwise"></i> Actualizar</button>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover mb-0">
+            <thead>
+              <tr>
+                <th>Referencia</th><th>Nombre</th><th>Tipo</th><th>Talla</th><th>Estado</th><th>Precio</th>
+              </tr>
+            </thead>
+            <tbody id="tablaPrendas"><tr><td colspan="6" class="text-center text-muted py-3">Cargando...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Por Talla -->
+  <div id="tab-talla" class="tab-content-panel d-none">
+    <div class="card mb-3">
+      <div class="card-body">
+        <div class="row g-2 align-items-end">
+          <div class="col-md-4">
+            <label class="form-label">Talla a consultar</label>
+            <input type="text" id="inputTalla" class="form-control" placeholder="Ej: M, L, XL, 38" />
+          </div>
+          <div class="col-auto">
+            <button class="btn btn-primary" id="btnBuscarTalla">
+              <i class="bi bi-search me-1"></i>Buscar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="resultadoTalla"></div>
+  </div>
+
+  <!-- Por Referencia -->
+  <div id="tab-referencia" class="tab-content-panel d-none">
+    <div class="card mb-3">
+      <div class="card-body">
+        <div class="row g-2 align-items-end">
+          <div class="col-md-4">
+            <label class="form-label">Referencia de la prenda</label>
+            <input type="text" id="inputReferencia" class="form-control" placeholder="Ej: VEST-001" />
+          </div>
+          <div class="col-auto">
+            <button class="btn btn-primary" id="btnBuscarRef">
+              <i class="bi bi-search me-1"></i>Buscar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="resultadoRef"></div>
+  </div>
+</Layout>
+
+<script>
+  const estadoBadge = (e) => {
+    const map = { DISPONIBLE: 'success', ALQUILADA: 'warning', EN_LAVANDERIA: 'info' };
+    return `<span class="badge bg-${map[e] || 'secondary'}">${e?.replace('_', ' ')}</span>`;
+  };
+
+  // Tabs
+  document.querySelectorAll('[data-tab]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-tab]').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content-panel').forEach(p => p.classList.add('d-none'));
+      btn.classList.add('active');
+      document.getElementById(`tab-${btn.dataset.tab}`).classList.remove('d-none');
+      if (btn.dataset.tab === 'listar') loadPrendas();
+    });
+  });
+
+  // Registrar
+  document.getElementById('formPrenda').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const data = Object.fromEntries(new FormData(e.target));
+    data.precio_alquiler = parseFloat(data.precio_alquiler);
+    try {
+      const res = await fetch(`${window.API_URL}/prendas`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.message || 'Error al registrar');
+      window.showToast(`<i class="bi bi-check-circle me-1"></i>Prenda <strong>${json.referencia}</strong> registrada exitosamente`);
+      e.target.reset();
+    } catch (err) {
+      window.showToast(`<i class="bi bi-x-circle me-1"></i>${err.message}`, 'danger');
+    }
+  });
+
+  // Listar
+  async function loadPrendas() {
+    try {
+      const res = await fetch(`${window.API_URL}/prendas`);
+      const prendas = await res.json();
+      const tbody = document.getElementById('tablaPrendas');
+      if (!prendas.length) { tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted py-3">No hay prendas registradas</td></tr>'; return; }
+      tbody.innerHTML = prendas.map(p => `
+        <tr>
+          <td><code>${p.referencia}</code></td>
+          <td>${p.nombre}</td>
+          <td>${p.tipo}</td>
+          <td><span class="badge bg-secondary">${p.talla}</span></td>
+          <td>${estadoBadge(p.estado)}</td>
+          <td>$${parseFloat(p.precio_alquiler).toLocaleString('es-CO')}</td>
+        </tr>`).join('');
+    } catch {
+      window.showToast('Error cargando prendas', 'danger');
+    }
+  }
+  document.getElementById('btnRefreshPrendas').addEventListener('click', loadPrendas);
+
+  // Por talla
+  document.getElementById('btnBuscarTalla').addEventListener('click', async () => {
+    const talla = document.getElementById('inputTalla').value.trim();
+    if (!talla) return;
+    try {
+      const res = await fetch(`${window.API_URL}/prendas/talla/${encodeURIComponent(talla)}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+      const tipos = data.tipos;
+      const div = document.getElementById('resultadoTalla');
+      if (!Object.keys(tipos).length) { div.innerHTML = '<div class="alert alert-info">No se encontraron prendas con esa talla</div>'; return; }
+      div.innerHTML = Object.entries(tipos).map(([tipo, items]) => `
+        <div class="card mb-3">
+          <div class="card-header bg-light"><strong>${tipo}</strong> <span class="badge bg-primary ms-1">${items.length}</span></div>
+          <div class="card-body p-0">
+            <table class="table table-sm mb-0">
+              <thead><tr><th>Referencia</th><th>Nombre</th><th>Estado</th><th>Precio</th></tr></thead>
+              <tbody>${items.map(p => `<tr><td><code>${p.referencia}</code></td><td>${p.nombre}</td><td>${estadoBadge(p.estado)}</td><td>$${parseFloat(p.precio_alquiler).toLocaleString('es-CO')}</td></tr>`).join('')}</tbody>
+            </table>
+          </div>
+        </div>`).join('');
+    } catch (err) {
+      window.showToast(`<i class="bi bi-x-circle me-1"></i>${err.message}`, 'danger');
+    }
+  });
+
+  // Por referencia
+  document.getElementById('btnBuscarRef').addEventListener('click', async () => {
+    const ref = document.getElementById('inputReferencia').value.trim();
+    if (!ref) return;
+    try {
+      const res = await fetch(`${window.API_URL}/prendas/${encodeURIComponent(ref)}`);
+      const p = await res.json();
+      if (!res.ok) throw new Error(p.message);
+      document.getElementById('resultadoRef').innerHTML = `
+        <div class="card">
+          <div class="card-header bg-light">Detalle de Prenda</div>
+          <div class="card-body">
+            <div class="row g-3">
+              <div class="col-6 col-md-3"><small class="text-muted d-block">Referencia</small><strong>${p.referencia}</strong></div>
+              <div class="col-6 col-md-3"><small class="text-muted d-block">Nombre</small>${p.nombre}</div>
+              <div class="col-6 col-md-3"><small class="text-muted d-block">Tipo</small>${p.tipo}</div>
+              <div class="col-6 col-md-3"><small class="text-muted d-block">Talla</small><span class="badge bg-secondary">${p.talla}</span></div>
+              <div class="col-6 col-md-3"><small class="text-muted d-block">Estado</small>${estadoBadge(p.estado)}</div>
+              <div class="col-6 col-md-3"><small class="text-muted d-block">Precio Alquiler</small>$${parseFloat(p.precio_alquiler).toLocaleString('es-CO')}</div>
+              ${p.descripcion ? `<div class="col-12"><small class="text-muted d-block">Descripción</small>${p.descripcion}</div>` : ''}
+            </div>
+          </div>
+        </div>`;
+    } catch (err) {
+      document.getElementById('resultadoRef').innerHTML = `<div class="alert alert-warning">${err.message}</div>`;
+    }
+  });
+</script>
