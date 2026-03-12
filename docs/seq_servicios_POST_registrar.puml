@@ -1,0 +1,91 @@
+@startuml POST_servicios_registrar
+title POST /api/servicios — Registrar Servicio de Alquiler
+
+actor Frontend as FE
+participant "ServiciosController" as CTRL
+participant "ServiciosService" as SVC
+participant "ClientesService" as CSVC
+participant "EmpleadosService" as ESVC
+participant "PrendasService" as PSVC
+database "PostgreSQL" as DB
+
+FE -> CTRL : POST /api/servicios\n{ cliente_id, empleado_id,\n  referencias_prendas[],\n  fecha_alquiler }
+
+CTRL -> CTRL : ValidationPipe\nvalida CreateServicioDto
+
+alt Payload inválido
+    CTRL --> FE : 400 Bad Request\n{ message: errores de validación }
+end
+
+CTRL -> SVC : create(dto)
+
+' Validar cliente
+SVC -> CSVC : findById(dto.cliente_id)
+CSVC -> DB : SELECT * FROM clientes\nWHERE numero_identificacion = ?
+
+alt Cliente no existe
+    DB --> CSVC : null
+    CSVC --> SVC : throw NotFoundException
+    SVC --> CTRL : NotFoundException
+    CTRL --> FE : 404 Not Found\n{ message: "Cliente ... no encontrado" }
+else Cliente existe
+    DB --> CSVC : Cliente
+    CSVC --> SVC : Cliente
+end
+
+' Validar empleado
+SVC -> ESVC : findById(dto.empleado_id)
+ESVC -> DB : SELECT * FROM empleados\nWHERE numero_identificacion = ?
+
+alt Empleado no existe
+    DB --> ESVC : null
+    ESVC --> SVC : throw NotFoundException
+    SVC --> CTRL : NotFoundException
+    CTRL --> FE : 404 Not Found\n{ message: "Empleado ... no encontrado" }
+else Empleado existe
+    DB --> ESVC : Empleado
+    ESVC --> SVC : Empleado
+end
+
+' Validar cada prenda (loop)
+loop por cada referencia en referencias_prendas[]
+    SVC -> PSVC : findByReferencia(referencia)
+    PSVC -> DB : SELECT * FROM prendas\nWHERE referencia = ?
+
+    alt Prenda no existe
+        DB --> PSVC : null
+        PSVC --> SVC : throw NotFoundException
+        CTRL --> FE : 404 Not Found\n{ message: "Prenda X no encontrada" }
+    else Prenda existe
+        DB --> PSVC : Prenda
+        PSVC --> SVC : Prenda
+    end
+
+    alt Prenda en lavandería (estado = EN_LAVANDERIA)
+        SVC --> CTRL : throw BadRequestException
+        CTRL --> FE : 400 Bad Request\n{ message: "Prenda X se encuentra en lavandería" }
+    end
+
+    SVC -> DB : SELECT servicio WHERE prendas.referencia = ?\nAND fecha_alquiler = dto.fecha_alquiler
+
+    alt Prenda ya reservada para esa fecha
+        DB --> SVC : ServicioAlquiler existente
+        SVC --> CTRL : throw BadRequestException
+        CTRL --> FE : 400 Bad Request\n{ message: "Prenda X ya está\n reservada para esa fecha en #N" }
+    else Prenda disponible para esa fecha
+        DB --> SVC : null
+        SVC -> SVC : prendas.push(prenda)
+    end
+end
+
+' Crear servicio
+SVC -> DB : INSERT INTO servicios_alquiler\n(cliente, empleado, fecha_alquiler,\n fecha_solicitud=NOW())
+DB --> SVC : ServicioAlquiler (numero_servicio auto-generado)
+
+SVC -> DB : INSERT INTO servicio_prendas\n(servicio_id, prenda_referencia) x N
+DB --> SVC : OK
+
+SVC --> CTRL : ServicioAlquiler
+CTRL --> FE : 201 Created\n{ numero_servicio, fecha_alquiler,\n  fecha_solicitud, cliente, empleado,\n  prendas[] }
+
+@enduml

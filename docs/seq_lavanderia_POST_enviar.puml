@@ -1,0 +1,46 @@
+@startuml POST_lavanderia_enviar
+title POST /api/lavanderia/enviar — Enviar prendas a lavandería
+
+actor Frontend as FE
+participant "LavanderiaController" as CTRL
+participant "LavanderiaService" as SVC
+database "PostgreSQL" as DB
+
+FE -> CTRL : POST /api/lavanderia/enviar\n{ cantidad: 3 }
+
+CTRL -> CTRL : ValidationPipe\nvalida EnviarPrendasDto\n(cantidad: int > 0)
+
+alt Payload inválido
+    CTRL --> FE : 400 Bad Request\n{ message: errores de validación }
+end
+
+CTRL -> SVC : enviar({ cantidad: 3 })
+
+SVC -> DB : SELECT lista_lavanderia, prenda\nFROM lista_lavanderia\nWHERE enviada = false\n(JOIN: prenda)\nORDER BY prioridad DESC,\n         fecha_registro ASC
+
+alt Cola vacía (0 pendientes)
+    DB --> SVC : []
+    SVC --> CTRL : throw NotFoundException
+    CTRL --> FE : 404 Not Found\n{ message: "No hay prendas\n pendientes de envío" }
+else Hay pendientes
+    DB --> SVC : ListaLavanderia[] (todas las pendientes)
+    SVC -> SVC : cantidadReal = min(3, total_pendientes)\naEnviar = pendientes[0..cantidadReal]
+
+    loop por cada item en aEnviar
+        SVC -> DB : UPDATE lista_lavanderia\nSET enviada = true\nWHERE id = item.id
+        DB --> SVC : OK
+    end
+
+    SVC --> CTRL : { mensaje, cantidad_enviada,\n  prendas_enviadas: [...] }
+    CTRL --> FE : 201 Created\n{ mensaje: "Se enviaron N prenda(s)\n a lavandería exitosamente",\n  cantidad_enviada: N,\n  prendas_enviadas: [\n    { id, prioridad,\n      fecha_registro,\n      prenda: { ... } }\n  ] }
+end
+
+note right of FE
+  Orden de envío:
+  1° Prioridad alta (prioridad=true) por fecha ASC
+  2° Prioridad normal (prioridad=false) por fecha ASC
+  Si se pide más cantidad de la disponible,
+  se envían todas las pendientes.
+end note
+
+@enduml

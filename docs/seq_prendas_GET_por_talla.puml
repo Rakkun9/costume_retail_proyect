@@ -1,0 +1,26 @@
+@startuml GET_prendas_talla
+title GET /api/prendas/talla/:talla — Consultar prendas por talla
+
+actor Cliente as FE
+participant "PrendasController" as CTRL
+participant "PrendasService" as SVC
+database "PostgreSQL\n(prendas)" as DB
+
+FE -> CTRL : GET /api/prendas/talla/M
+
+CTRL -> SVC : findByTalla("M")
+SVC -> DB : SELECT * FROM prendas\nWHERE talla = 'M'
+DB --> SVC : Prenda[]
+
+SVC -> SVC : Agrupa prendas por tipo:\ntipos[prenda.tipo].push(prenda)
+
+SVC --> CTRL : { talla: "M", tipos: {\n  "Vestido": [...],\n  "Disfraz": [...] } }
+
+CTRL --> FE : 200 OK\n{ talla, tipos: { [tipo]: Prenda[] } }
+
+note right of FE
+  Si no hay prendas con esa talla,
+  tipos = {} y la respuesta es 200 OK
+end note
+
+@enduml

@@ -1,0 +1,32 @@
+@startuml POST_empleados_registrar
+title POST /api/empleados — Registrar Empleado
+
+actor Frontend as FE
+participant "EmpleadosController" as CTRL
+participant "EmpleadosService" as SVC
+database "PostgreSQL\n(empleados)" as DB
+
+FE -> CTRL : POST /api/empleados\n{ numero_identificacion, nombre,\n  apellido, telefono,\n  cargo, email? }
+
+CTRL -> CTRL : ValidationPipe\nvalida CreateEmpleadoDto
+
+alt Payload inválido
+    CTRL --> FE : 400 Bad Request\n{ message: errores de validación }
+end
+
+CTRL -> SVC : create(dto)
+SVC -> DB : SELECT * FROM empleados\nWHERE numero_identificacion = dto.numero_identificacion
+
+alt Empleado ya existe
+    DB --> SVC : empleado encontrado
+    SVC --> CTRL : throw BadRequestException
+    CTRL --> FE : 400 Bad Request\n{ message: "Ya existe un empleado\n con identificación X" }
+else Empleado nuevo
+    DB --> SVC : null
+    SVC -> DB : INSERT INTO empleados\n(numero_identificacion, nombre,\n apellido, telefono, cargo, email)
+    DB --> SVC : empleado creado
+    SVC --> CTRL : Empleado
+    CTRL --> FE : 201 Created\n{ numero_identificacion, nombre,\n  apellido, cargo, telefono, email }
+end
+
+@enduml

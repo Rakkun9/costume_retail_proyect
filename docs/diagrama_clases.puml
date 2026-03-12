@@ -1,0 +1,304 @@
+@startuml diagrama_clases
+title Sistema de Alquiler de Prendas — Diagrama de Clases
+
+skinparam classAttributeIconSize 0
+skinparam classFontSize 13
+skinparam classBackgroundColor #FEFEFE
+skinparam classBorderColor #555555
+skinparam arrowColor #333333
+skinparam packageBackgroundColor #F0F4FF
+skinparam packageBorderColor #7B9FD4
+skinparam stereotypeCBackgroundColor #D5E8D4
+skinparam stereotypeABackgroundColor #DAE8FC
+skinparam noteBackgroundColor #FFF9C4
+skinparam noteBorderColor #CCAA00
+
+' ─────────────────────────────────────────
+'  ENUMERACIONES
+' ─────────────────────────────────────────
+
+enum EstadoPrenda {
+  DISPONIBLE
+  ALQUILADA
+  EN_LAVANDERIA
+}
+
+' ─────────────────────────────────────────
+'  ENTIDADES (Tablas de la BD)
+' ─────────────────────────────────────────
+
+package "Entidades" {
+
+  class Prenda <<Entity>> {
+    + referencia : string  <<PK>>
+    + nombre : string
+    + descripcion : string
+    + talla : string
+    + tipo : string
+    + estado : EstadoPrenda
+    + precio_alquiler : decimal
+    --
+    + servicios : ServicioAlquiler[]
+    + listaLavanderia : ListaLavanderia[]
+  }
+
+  class Cliente <<Entity>> {
+    + numero_identificacion : string  <<PK>>
+    + nombre : string
+    + apellido : string
+    + telefono : string
+    + email : string
+    + direccion : string
+    --
+    + servicios : ServicioAlquiler[]
+  }
+
+  class Empleado <<Entity>> {
+    + numero_identificacion : string  <<PK>>
+    + nombre : string
+    + apellido : string
+    + telefono : string
+    + email : string
+    + cargo : string
+    --
+    + servicios : ServicioAlquiler[]
+  }
+
+  class ServicioAlquiler <<Entity>> {
+    + numero_servicio : number  <<PK, auto>>
+    + fecha_alquiler : date
+    + fecha_solicitud : Date  <<auto=NOW()>>
+    --
+    + cliente : Cliente
+    + empleado : Empleado
+    + prendas : Prenda[]
+  }
+
+  class ListaLavanderia <<Entity>> {
+    + id : number  <<PK, auto>>
+    + prioridad : boolean
+    + fecha_registro : Date  <<auto=NOW()>>
+    + enviada : boolean
+    --
+    + prenda : Prenda
+  }
+}
+
+' ─────────────────────────────────────────
+'  DTOs
+' ─────────────────────────────────────────
+
+package "DTOs" {
+
+  class CreatePrendaDto <<DTO>> {
+    + referencia : string
+    + nombre : string
+    + descripcion? : string
+    + talla : string
+    + tipo : string
+    + estado? : EstadoPrenda
+    + precio_alquiler : number
+  }
+
+  class CreateClienteDto <<DTO>> {
+    + numero_identificacion : string
+    + nombre : string
+    + apellido : string
+    + telefono : string
+    + email? : string
+    + direccion : string
+  }
+
+  class CreateEmpleadoDto <<DTO>> {
+    + numero_identificacion : string
+    + nombre : string
+    + apellido : string
+    + telefono : string
+    + email? : string
+    + cargo : string
+  }
+
+  class CreateServicioDto <<DTO>> {
+    + cliente_id : string
+    + empleado_id : string
+    + referencias_prendas : string[]
+    + fecha_alquiler : string
+  }
+
+  class AgregarLavanderiaDto <<DTO>> {
+    + referencia : string
+    + prioridad? : boolean
+  }
+
+  class EnviarPrendasDto <<DTO>> {
+    + cantidad : number
+  }
+}
+
+' ─────────────────────────────────────────
+'  SERVICIOS
+' ─────────────────────────────────────────
+
+package "Servicios" {
+
+  class PrendasService <<Service>> {
+    - prendasRepository : Repository<Prenda>
+    --
+    + create(dto: CreatePrendaDto) : Promise<Prenda>
+    + findAll() : Promise<Prenda[]>
+    + findByReferencia(ref: string) : Promise<Prenda>
+    + findByTalla(talla: string) : Promise<object>
+    + updateEstado(ref: string, estado: EstadoPrenda) : Promise<Prenda>
+  }
+
+  class ClientesService <<Service>> {
+    - clientesRepository : Repository<Cliente>
+    --
+    + create(dto: CreateClienteDto) : Promise<Cliente>
+    + findAll() : Promise<Cliente[]>
+    + findById(id: string) : Promise<Cliente>
+  }
+
+  class EmpleadosService <<Service>> {
+    - empleadosRepository : Repository<Empleado>
+    --
+    + create(dto: CreateEmpleadoDto) : Promise<Empleado>
+    + findAll() : Promise<Empleado[]>
+    + findById(id: string) : Promise<Empleado>
+  }
+
+  class ServiciosService <<Service>> {
+    - serviciosRepository : Repository<ServicioAlquiler>
+    - clientesService : ClientesService
+    - empleadosService : EmpleadosService
+    - prendasService : PrendasService
+    --
+    + create(dto: CreateServicioDto) : Promise<ServicioAlquiler>
+    + findByNumero(numero: number) : Promise<ServicioAlquiler>
+    + findByCliente(clienteId: string) : Promise<object>
+    + findByFecha(fecha: string) : Promise<ServicioAlquiler[]>
+  }
+
+  class LavanderiaService <<Service>> {
+    - lavanderiaRepository : Repository<ListaLavanderia>
+    - prendasService : PrendasService
+    --
+    + agregar(dto: AgregarLavanderiaDto) : Promise<ListaLavanderia>
+    + findPendientes() : Promise<ListaLavanderia[]>
+    + enviar(dto: EnviarPrendasDto) : Promise<object>
+  }
+}
+
+' ─────────────────────────────────────────
+'  CONTROLADORES
+' ─────────────────────────────────────────
+
+package "Controladores" {
+
+  class PrendasController <<Controller>> {
+    - prendasService : PrendasService
+    --
+    + create(dto: CreatePrendaDto) : Promise<Prenda>
+    + findAll() : Promise<Prenda[]>
+    + findByTalla(talla: string) : Promise<object>
+    + findOne(referencia: string) : Promise<Prenda>
+  }
+
+  class ClientesController <<Controller>> {
+    - clientesService : ClientesService
+    --
+    + create(dto: CreateClienteDto) : Promise<Cliente>
+    + findAll() : Promise<Cliente[]>
+    + findOne(id: string) : Promise<Cliente>
+  }
+
+  class EmpleadosController <<Controller>> {
+    - empleadosService : EmpleadosService
+    --
+    + create(dto: CreateEmpleadoDto) : Promise<Empleado>
+    + findAll() : Promise<Empleado[]>
+    + findOne(id: string) : Promise<Empleado>
+  }
+
+  class ServiciosController <<Controller>> {
+    - serviciosService : ServiciosService
+    --
+    + create(dto: CreateServicioDto) : Promise<ServicioAlquiler>
+    + findByCliente(clienteId: string) : Promise<object>
+    + findByFecha(fecha: string) : Promise<ServicioAlquiler[]>
+    + findOne(numero: number) : Promise<ServicioAlquiler>
+  }
+
+  class LavanderiaController <<Controller>> {
+    - lavanderiaService : LavanderiaService
+    --
+    + agregar(dto: AgregarLavanderiaDto) : Promise<ListaLavanderia>
+    + findPendientes() : Promise<ListaLavanderia[]>
+    + enviar(dto: EnviarPrendasDto) : Promise<object>
+  }
+}
+
+' ─────────────────────────────────────────
+'  RELACIONES ENTRE ENTIDADES
+' ─────────────────────────────────────────
+
+Cliente      "1" --> "0..*" ServicioAlquiler : realiza >
+Empleado     "1" --> "0..*" ServicioAlquiler : atiende >
+Prenda       "0..*" <--> "0..*" ServicioAlquiler : incluida en\n(servicio_prendas)
+Prenda       "1" --> "0..*" ListaLavanderia : registrada en >
+
+Prenda       ..>  EstadoPrenda : usa
+
+' ─────────────────────────────────────────
+'  RELACIONES CONTROLADOR → SERVICIO
+' ─────────────────────────────────────────
+
+PrendasController    --> PrendasService
+ClientesController   --> ClientesService
+EmpleadosController  --> EmpleadosService
+ServiciosController  --> ServiciosService
+LavanderiaController --> LavanderiaService
+
+' ─────────────────────────────────────────
+'  DEPENDENCIAS ENTRE SERVICIOS
+' ─────────────────────────────────────────
+
+ServiciosService  --> ClientesService   : usa
+ServiciosService  --> EmpleadosService  : usa
+ServiciosService  --> PrendasService    : usa
+LavanderiaService --> PrendasService    : usa
+
+' ─────────────────────────────────────────
+'  SERVICIO → ENTIDAD (repositorio)
+' ─────────────────────────────────────────
+
+PrendasService    ..>  Prenda
+ClientesService   ..>  Cliente
+EmpleadosService  ..>  Empleado
+ServiciosService  ..>  ServicioAlquiler
+LavanderiaService ..>  ListaLavanderia
+
+' ─────────────────────────────────────────
+'  DTO → CONTROLADOR
+' ─────────────────────────────────────────
+
+CreatePrendaDto      ..>  PrendasController
+CreateClienteDto     ..>  ClientesController
+CreateEmpleadoDto    ..>  EmpleadosController
+CreateServicioDto    ..>  ServiciosController
+AgregarLavanderiaDto ..>  LavanderiaController
+EnviarPrendasDto     ..>  LavanderiaController
+
+note bottom of ServicioAlquiler
+  numero_servicio se genera
+  automáticamente (auto-increment).
+  fecha_solicitud = NOW() al insertar.
+end note
+
+note right of ListaLavanderia
+  Orden de envío a lavandería:
+  ORDER BY prioridad DESC,
+           fecha_registro ASC
+end note
+
+@enduml

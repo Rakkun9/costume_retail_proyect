@@ -1,0 +1,43 @@
+@startuml GET_servicios_por_cliente
+title GET /api/servicios/cliente/:clienteId — Servicios vigentes de un cliente
+
+actor Frontend as FE
+participant "ServiciosController" as CTRL
+participant "ServiciosService" as SVC
+participant "ClientesService" as CSVC
+database "PostgreSQL" as DB
+
+FE -> CTRL : GET /api/servicios/cliente/123456789
+
+CTRL -> SVC : findByCliente("123456789")
+
+SVC -> CSVC : findById("123456789")
+CSVC -> DB : SELECT * FROM clientes\nWHERE numero_identificacion = '123456789'
+
+alt Cliente no existe
+    DB --> CSVC : null
+    CSVC --> SVC : throw NotFoundException
+    SVC --> CTRL : NotFoundException
+    CTRL --> FE : 404 Not Found\n{ message: "Cliente ... no encontrado" }
+else Cliente existe
+    DB --> CSVC : Cliente
+    CSVC --> SVC : Cliente
+end
+
+SVC -> SVC : today = DATE() (fecha del sistema)
+
+SVC -> DB : SELECT servicio, prendas, empleado\nFROM servicios_alquiler\nWHERE cliente.numero_identificacion = '123456789'\n  AND fecha_alquiler >= today\nORDER BY fecha_alquiler ASC
+
+DB --> SVC : ServicioAlquiler[]
+
+SVC --> CTRL : { cliente: { ... }, servicios: [...] }
+
+CTRL --> FE : 200 OK\n{ cliente: { numero_identificacion,\n  nombre, apellido, ... },\n  servicios: [\n    { numero_servicio, fecha_alquiler,\n      empleado, prendas }, ...\n  ] }
+
+note right of FE
+  servicios[] puede estar vacío
+  si el cliente no tiene
+  alquileres vigentes
+end note
+
+@enduml

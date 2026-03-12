@@ -1,0 +1,26 @@
+@startuml GET_servicios_por_numero
+title GET /api/servicios/:numero — Consultar servicio por número
+
+actor Frontend as FE
+participant "ServiciosController" as CTRL
+participant "ServiciosService" as SVC
+database "PostgreSQL" as DB
+
+FE -> CTRL : GET /api/servicios/5
+
+CTRL -> CTRL : ParseIntPipe\nconvierte "5" → 5
+
+CTRL -> SVC : findByNumero(5)
+SVC -> DB : SELECT servicio, cliente,\n       empleado, prendas\nFROM servicios_alquiler\nWHERE numero_servicio = 5\n(JOIN: cliente, empleado, prendas)
+
+alt Servicio encontrado
+    DB --> SVC : ServicioAlquiler con relaciones
+    SVC --> CTRL : ServicioAlquiler
+    CTRL --> FE : 200 OK\n{ numero_servicio, fecha_alquiler,\n  fecha_solicitud,\n  cliente: { ... },\n  empleado: { ... },\n  prendas: [ ... ] }
+else No encontrado
+    DB --> SVC : null
+    SVC --> CTRL : throw NotFoundException
+    CTRL --> FE : 404 Not Found\n{ message: "Servicio de alquiler #5 no encontrado" }
+end
+
+@enduml

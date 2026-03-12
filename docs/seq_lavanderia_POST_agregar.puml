@@ -1,0 +1,47 @@
+@startuml POST_lavanderia_agregar
+title POST /api/lavanderia — Registrar prenda para envío a lavandería
+
+actor Frontend as FE
+participant "LavanderiaController" as CTRL
+participant "LavanderiaService" as SVC
+participant "PrendasService" as PSVC
+database "PostgreSQL" as DB
+
+FE -> CTRL : POST /api/lavanderia\n{ referencia: "VEST-001",\n  prioridad: true }
+
+CTRL -> CTRL : ValidationPipe\nvalida AgregarLavanderiaDto
+
+alt Payload inválido
+    CTRL --> FE : 400 Bad Request\n{ message: errores de validación }
+end
+
+CTRL -> SVC : agregar(dto)
+
+SVC -> PSVC : findByReferencia("VEST-001")
+PSVC -> DB : SELECT * FROM prendas\nWHERE referencia = 'VEST-001'
+
+alt Prenda no existe
+    DB --> PSVC : null
+    PSVC --> SVC : throw NotFoundException
+    CTRL --> FE : 404 Not Found\n{ message: "Prenda VEST-001 no encontrada" }
+else Prenda existe
+    DB --> PSVC : Prenda
+    PSVC --> SVC : Prenda
+end
+
+alt Prenda ya está en lavandería (estado = EN_LAVANDERIA)
+    SVC --> CTRL : throw BadRequestException
+    CTRL --> FE : 400 Bad Request\n{ message: "La prenda ya se encuentra\n en la lista de lavandería" }
+else Prenda disponible o alquilada
+    SVC -> PSVC : updateEstado("VEST-001", EN_LAVANDERIA)
+    PSVC -> DB : UPDATE prendas SET estado = 'EN_LAVANDERIA'\nWHERE referencia = 'VEST-001'
+    DB --> PSVC : OK
+
+    SVC -> DB : INSERT INTO lista_lavanderia\n(prenda_referencia, prioridad,\n fecha_registro=NOW(), enviada=false)
+    DB --> SVC : ListaLavanderia
+
+    SVC --> CTRL : ListaLavanderia
+    CTRL --> FE : 201 Created\n{ id, prenda: { ... },\n  prioridad, fecha_registro,\n  enviada: false }
+end
+
+@enduml

@@ -1,0 +1,32 @@
+@startuml POST_clientes_registrar
+title POST /api/clientes — Registrar Cliente
+
+actor Frontend as FE
+participant "ClientesController" as CTRL
+participant "ClientesService" as SVC
+database "PostgreSQL\n(clientes)" as DB
+
+FE -> CTRL : POST /api/clientes\n{ numero_identificacion, nombre,\n  apellido, telefono,\n  email?, direccion }
+
+CTRL -> CTRL : ValidationPipe\nvalida CreateClienteDto
+
+alt Payload inválido
+    CTRL --> FE : 400 Bad Request\n{ message: errores de validación }
+end
+
+CTRL -> SVC : create(dto)
+SVC -> DB : SELECT * FROM clientes\nWHERE numero_identificacion = dto.numero_identificacion
+
+alt Cliente ya existe
+    DB --> SVC : cliente encontrado
+    SVC --> CTRL : throw BadRequestException
+    CTRL --> FE : 400 Bad Request\n{ message: "Ya existe un cliente\n con identificación X" }
+else Cliente nuevo
+    DB --> SVC : null
+    SVC -> DB : INSERT INTO clientes\n(numero_identificacion, nombre,\n apellido, telefono, email, direccion)
+    DB --> SVC : cliente creado
+    SVC --> CTRL : Cliente
+    CTRL --> FE : 201 Created\n{ numero_identificacion, nombre,\n  apellido, telefono,\n  email, direccion }
+end
+
+@enduml

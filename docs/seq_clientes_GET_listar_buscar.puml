@@ -1,0 +1,34 @@
+@startuml GET_clientes_listar_y_buscar
+title GET /api/clientes — Listar | GET /api/clientes/:id — Buscar por ID
+
+actor Frontend as FE
+participant "ClientesController" as CTRL
+participant "ClientesService" as SVC
+database "PostgreSQL\n(clientes)" as DB
+
+== GET /api/clientes ==
+
+FE -> CTRL : GET /api/clientes
+CTRL -> SVC : findAll()
+SVC -> DB : SELECT * FROM clientes
+DB --> SVC : Cliente[]
+SVC --> CTRL : Cliente[]
+CTRL --> FE : 200 OK  [ { ... }, ... ]
+
+== GET /api/clientes/:id ==
+
+FE -> CTRL : GET /api/clientes/123456789
+CTRL -> SVC : findById("123456789")
+SVC -> DB : SELECT * FROM clientes\nWHERE numero_identificacion = '123456789'
+
+alt Encontrado
+    DB --> SVC : Cliente
+    SVC --> CTRL : Cliente
+    CTRL --> FE : 200 OK\n{ numero_identificacion, nombre,\n  apellido, telefono, email, direccion }
+else No encontrado
+    DB --> SVC : null
+    SVC --> CTRL : throw NotFoundException
+    CTRL --> FE : 404 Not Found\n{ message: "Cliente con identificación\n 123456789 no encontrado" }
+end
+
+@enduml

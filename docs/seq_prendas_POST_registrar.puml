@@ -1,0 +1,32 @@
+@startuml POST_prendas_registrar
+title POST /api/prendas — Registrar Prenda
+
+actor Cliente as FE
+participant "PrendasController" as CTRL
+participant "PrendasService" as SVC
+database "PostgreSQL\n(prendas)" as DB
+
+FE -> CTRL : POST /api/prendas\n{ referencia, nombre, tipo,\n  talla, precio_alquiler, descripcion? }
+
+CTRL -> CTRL : ValidationPipe\nvalida CreatePrendaDto
+
+alt Payload inválido
+    CTRL --> FE : 400 Bad Request\n{ message: errores de validación }
+end
+
+CTRL -> SVC : create(dto)
+SVC -> DB : SELECT * FROM prendas\nWHERE referencia = dto.referencia
+
+alt Referencia ya existe
+    DB --> SVC : prenda encontrada
+    SVC --> CTRL : throw BadRequestException
+    CTRL --> FE : 400 Bad Request\n{ message: "Ya existe una prenda con referencia X" }
+else Referencia libre
+    DB --> SVC : null
+    SVC -> DB : INSERT INTO prendas\n(referencia, nombre, tipo, talla,\n precio_alquiler, estado='DISPONIBLE', ...)
+    DB --> SVC : prenda creada
+    SVC --> CTRL : Prenda
+    CTRL --> FE : 201 Created\n{ referencia, nombre, tipo, talla,\n  estado, precio_alquiler, ... }
+end
+
+@enduml

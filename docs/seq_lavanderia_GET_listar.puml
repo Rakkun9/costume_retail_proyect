@@ -1,0 +1,26 @@
+@startuml GET_lavanderia_listar_pendientes
+title GET /api/lavanderia — Ver listado de prendas pendientes de envío
+
+actor Frontend as FE
+participant "LavanderiaController" as CTRL
+participant "LavanderiaService" as SVC
+database "PostgreSQL\n(lista_lavanderia)" as DB
+
+FE -> CTRL : GET /api/lavanderia
+
+CTRL -> SVC : findPendientes()
+SVC -> DB : SELECT lista_lavanderia, prenda\nFROM lista_lavanderia\nWHERE enviada = false\n(JOIN: prenda)\nORDER BY prioridad DESC,\n         fecha_registro ASC
+
+DB --> SVC : ListaLavanderia[]
+
+SVC --> CTRL : ListaLavanderia[]
+CTRL --> FE : 200 OK\n[ { id, prioridad, fecha_registro,\n    prenda: { referencia, nombre,\n    tipo, talla, ... } }, ... ]
+
+note right of FE
+  ⚠️ Ver la lista NO envía las prendas.
+  Los registros con prioridad=true
+  aparecen primero (ORDER BY prioridad DESC).
+  Si no hay pendientes, devuelve [].
+end note
+
+@enduml

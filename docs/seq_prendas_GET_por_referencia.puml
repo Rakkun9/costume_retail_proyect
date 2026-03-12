@@ -1,0 +1,24 @@
+@startuml GET_prendas_referencia
+title GET /api/prendas/:referencia — Consultar prenda por referencia
+
+actor Cliente as FE
+participant "PrendasController" as CTRL
+participant "PrendasService" as SVC
+database "PostgreSQL\n(prendas)" as DB
+
+FE -> CTRL : GET /api/prendas/VEST-001
+
+CTRL -> SVC : findByReferencia("VEST-001")
+SVC -> DB : SELECT * FROM prendas\nWHERE referencia = 'VEST-001'
+
+alt Prenda encontrada
+    DB --> SVC : Prenda
+    SVC --> CTRL : Prenda
+    CTRL --> FE : 200 OK\n{ referencia, nombre, tipo,\n  talla, estado, precio_alquiler,\n  descripcion }
+else No encontrada
+    DB --> SVC : null
+    SVC --> CTRL : throw NotFoundException
+    CTRL --> FE : 404 Not Found\n{ message: "Prenda con referencia\n VEST-001 no encontrada" }
+end
+
+@enduml

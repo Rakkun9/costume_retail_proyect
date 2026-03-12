@@ -1,0 +1,23 @@
+@startuml GET_prendas_listar
+title GET /api/prendas — Listar todas las prendas
+
+actor Cliente as FE
+participant "PrendasController" as CTRL
+participant "PrendasService" as SVC
+database "PostgreSQL\n(prendas)" as DB
+
+FE -> CTRL : GET /api/prendas
+
+CTRL -> SVC : findAll()
+SVC -> DB : SELECT * FROM prendas
+DB --> SVC : Prenda[]
+
+SVC --> CTRL : Prenda[]
+CTRL --> FE : 200 OK\n[ { referencia, nombre, tipo,\n   talla, estado, precio_alquiler }, ... ]
+
+note right of FE
+  Lista vacía devuelve []
+  con status 200
+end note
+
+@enduml

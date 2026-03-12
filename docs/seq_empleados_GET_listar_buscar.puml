@@ -1,0 +1,34 @@
+@startuml GET_empleados_listar_y_buscar
+title GET /api/empleados — Listar | GET /api/empleados/:id — Buscar por ID
+
+actor Frontend as FE
+participant "EmpleadosController" as CTRL
+participant "EmpleadosService" as SVC
+database "PostgreSQL\n(empleados)" as DB
+
+== GET /api/empleados ==
+
+FE -> CTRL : GET /api/empleados
+CTRL -> SVC : findAll()
+SVC -> DB : SELECT * FROM empleados
+DB --> SVC : Empleado[]
+SVC --> CTRL : Empleado[]
+CTRL --> FE : 200 OK  [ { ... }, ... ]
+
+== GET /api/empleados/:id ==
+
+FE -> CTRL : GET /api/empleados/987654321
+CTRL -> SVC : findById("987654321")
+SVC -> DB : SELECT * FROM empleados\nWHERE numero_identificacion = '987654321'
+
+alt Encontrado
+    DB --> SVC : Empleado
+    SVC --> CTRL : Empleado
+    CTRL --> FE : 200 OK\n{ numero_identificacion, nombre,\n  apellido, cargo, telefono, email }
+else No encontrado
+    DB --> SVC : null
+    SVC --> CTRL : throw NotFoundException
+    CTRL --> FE : 404 Not Found\n{ message: "Empleado con identificación\n 987654321 no encontrado" }
+end
+
+@enduml

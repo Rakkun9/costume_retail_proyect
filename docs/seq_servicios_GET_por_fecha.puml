@@ -1,0 +1,24 @@
+@startuml GET_servicios_por_fecha
+title GET /api/servicios/fecha/:fecha — Servicios por fecha de alquiler
+
+actor Frontend as FE
+participant "ServiciosController" as CTRL
+participant "ServiciosService" as SVC
+database "PostgreSQL" as DB
+
+FE -> CTRL : GET /api/servicios/fecha/2026-04-15
+
+CTRL -> SVC : findByFecha("2026-04-15")
+SVC -> DB : SELECT servicio, cliente,\n       empleado, prendas\nFROM servicios_alquiler\nWHERE fecha_alquiler = '2026-04-15'\n(JOIN: cliente, empleado, prendas)
+
+DB --> SVC : ServicioAlquiler[]
+
+SVC --> CTRL : ServicioAlquiler[]
+CTRL --> FE : 200 OK\n[ { numero_servicio, fecha_alquiler,\n  fecha_solicitud, cliente,\n  empleado, prendas }, ... ]
+
+note right of FE
+  Si no hay servicios para esa fecha
+  devuelve [] con status 200
+end note
+
+@enduml
