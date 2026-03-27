@@ -1,0 +1,53 @@
+@startuml
+skinparam classAttributeIconSize 0
+
+package "Patrones de Comportamiento" {
+  interface "Iterator<T>" as Iterator
+  class ArrayIterator
+  class PrendaReferenceIterator
+
+  interface "Command<T>" as Command
+  class LavanderiaCommandInvoker
+  class AgregarPrendaLavanderiaCommand
+  class EnviarPrendasLavanderiaCommand
+
+  interface SeleccionEnvioStrategy
+  class FifoStrategy
+  class PrioridadFifoStrategy
+
+  interface DomainEventObserver
+  class DomainEventPublisher
+  class ConsoleLogObserver
+  class InMemoryEventsObserver
+}
+
+package "Servicios de Negocio" {
+  class ServiciosService
+  class LavanderiaService
+  class PrendasService
+}
+
+Iterator <|.. ArrayIterator
+ArrayIterator <|-- PrendaReferenceIterator
+
+Command <|.. AgregarPrendaLavanderiaCommand
+Command <|.. EnviarPrendasLavanderiaCommand
+LavanderiaCommandInvoker --> Command : execute()
+LavanderiaService --> LavanderiaCommandInvoker
+LavanderiaService --> AgregarPrendaLavanderiaCommand
+LavanderiaService --> EnviarPrendasLavanderiaCommand
+
+SeleccionEnvioStrategy <|.. FifoStrategy
+SeleccionEnvioStrategy <|.. PrioridadFifoStrategy
+EnviarPrendasLavanderiaCommand --> SeleccionEnvioStrategy
+
+DomainEventPublisher --> DomainEventObserver : notify()
+DomainEventObserver <|.. ConsoleLogObserver
+DomainEventObserver <|.. InMemoryEventsObserver
+
+ServiciosService --> PrendaReferenceIterator
+ServiciosService --> DomainEventPublisher
+PrendasService --> DomainEventPublisher
+LavanderiaService --> DomainEventPublisher
+
+@enduml

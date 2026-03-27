@@ -11,6 +11,8 @@ import { ClientesService } from '../clientes/clientes.service';
 import { EmpleadosService } from '../empleados/empleados.service';
 import { PrendasService } from '../prendas/prendas.service';
 import { EstadoPrenda, Prenda } from '../prendas/prenda.entity';
+import { PrendaReferenceIterator } from '../patrones/iterator/prenda-reference.iterator';
+import { DomainEventPublisher } from '../patrones/observer/domain-event.publisher';
 
 @Injectable()
 export class ServiciosService {
@@ -20,6 +22,7 @@ export class ServiciosService {
     private readonly clientesService: ClientesService,
     private readonly empleadosService: EmpleadosService,
     private readonly prendasService: PrendasService,
+    private readonly domainEventPublisher: DomainEventPublisher,
   ) {}
 
   async create(dto: CreateServicioDto): Promise<ServicioAlquiler> {
@@ -27,7 +30,10 @@ export class ServiciosService {
     const empleado = await this.empleadosService.findById(dto.empleado_id);
 
     const prendas: Prenda[] = [];
-    for (const referencia of dto.referencias_prendas) {
+    const iterator = new PrendaReferenceIterator(dto.referencias_prendas);
+
+    while (iterator.hasNext()) {
+      const referencia = iterator.next();
       const prenda = await this.prendasService.findByReferencia(referencia);
 
       if (prenda.estado === EstadoPrenda.EN_LAVANDERIA) {
@@ -62,7 +68,21 @@ export class ServiciosService {
       fecha_alquiler: dto.fecha_alquiler,
     });
 
-    return this.serviciosRepository.save(servicio);
+    const saved = await this.serviciosRepository.save(servicio);
+
+    await this.domainEventPublisher.notify({
+      name: 'servicio.alquiler.creado',
+      occurredOn: new Date(),
+      payload: {
+        numero_servicio: saved.numero_servicio,
+        cliente_id: dto.cliente_id,
+        empleado_id: dto.empleado_id,
+        fecha_alquiler: dto.fecha_alquiler,
+        total_prendas: prendas.length,
+      },
+    });
+
+    return saved;
   }
 
   async findByNumero(numero: number): Promise<ServicioAlquiler> {

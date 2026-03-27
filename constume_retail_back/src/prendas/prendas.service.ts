@@ -7,12 +7,14 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Prenda } from './prenda.entity';
 import { CreatePrendaDto } from './dto/create-prenda.dto';
+import { DomainEventPublisher } from '../patrones/observer/domain-event.publisher';
 
 @Injectable()
 export class PrendasService {
   constructor(
     @InjectRepository(Prenda)
     private readonly prendasRepository: Repository<Prenda>,
+    private readonly domainEventPublisher: DomainEventPublisher,
   ) {}
 
   async create(dto: CreatePrendaDto): Promise<Prenda> {
@@ -64,6 +66,17 @@ export class PrendasService {
   ): Promise<Prenda> {
     const prenda = await this.findByReferencia(referencia);
     prenda.estado = estado;
-    return this.prendasRepository.save(prenda);
+    const updated = await this.prendasRepository.save(prenda);
+
+    await this.domainEventPublisher.notify({
+      name: 'prenda.estado.actualizado',
+      occurredOn: new Date(),
+      payload: {
+        referencia,
+        estado,
+      },
+    });
+
+    return updated;
   }
 }

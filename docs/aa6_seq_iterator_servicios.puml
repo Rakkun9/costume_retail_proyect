@@ -1,0 +1,19 @@
+@startuml
+actor Usuario
+participant ServiciosController
+participant ServiciosService
+participant PrendaReferenceIterator as Iterator
+participant PrendasService
+
+Usuario -> ServiciosController: POST /servicios
+ServiciosController -> ServiciosService: create(dto)
+ServiciosService -> Iterator: new(referencias_prendas)
+loop mientras hasNext()
+  ServiciosService -> Iterator: hasNext()
+  ServiciosService -> Iterator: next()
+  Iterator --> ServiciosService: referencia
+  ServiciosService -> PrendasService: findByReferencia(referencia)
+  PrendasService --> ServiciosService: prenda
+end
+ServiciosService --> ServiciosController: servicio guardado
+@enduml

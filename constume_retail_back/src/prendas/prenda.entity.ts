@@ -1,10 +1,4 @@
-import {
-  Column,
-  Entity,
-  ManyToMany,
-  OneToMany,
-  PrimaryColumn,
-} from 'typeorm';
+import { Column, Entity, ManyToMany, OneToMany, PrimaryColumn } from 'typeorm';
 
 export enum EstadoPrenda {
   DISPONIBLE = 'DISPONIBLE',

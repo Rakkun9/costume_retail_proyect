@@ -1,0 +1,16 @@
+@startuml
+actor Usuario
+participant LavanderiaController
+participant LavanderiaService
+participant LavanderiaCommandInvoker as Invoker
+participant AgregarPrendaLavanderiaCommand as Command
+
+Usuario -> LavanderiaController: POST /lavanderia
+LavanderiaController -> LavanderiaService: agregar(dto)
+LavanderiaService -> Command: new(..., dto)
+LavanderiaService -> Invoker: execute(Command)
+Invoker -> Command: execute()
+Command --> Invoker: ListaLavanderia
+Invoker --> LavanderiaService: ListaLavanderia
+LavanderiaService --> LavanderiaController: ListaLavanderia
+@enduml

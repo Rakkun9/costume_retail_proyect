@@ -1,0 +1,22 @@
+@startuml
+actor Usuario
+participant LavanderiaController
+participant LavanderiaService
+participant EnviarPrendasLavanderiaCommand as Command
+participant "SeleccionEnvioStrategy" as Strategy
+participant FifoStrategy
+participant PrioridadFifoStrategy
+
+Usuario -> LavanderiaController: POST /lavanderia/enviar
+LavanderiaController -> LavanderiaService: enviar(dto)
+alt dto.estrategia == FIFO
+  LavanderiaService -> FifoStrategy: seleccionar(...)
+  FifoStrategy --> LavanderiaService: prendas a enviar
+else estrategia por defecto
+  LavanderiaService -> PrioridadFifoStrategy: seleccionar(...)
+  PrioridadFifoStrategy --> LavanderiaService: prendas a enviar
+end
+LavanderiaService -> Command: execute()
+Command --> LavanderiaService: resultado envío
+LavanderiaService --> LavanderiaController: resultado envío
+@enduml

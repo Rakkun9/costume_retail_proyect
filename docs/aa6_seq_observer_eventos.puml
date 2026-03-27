@@ -1,0 +1,10 @@
+@startuml
+participant PrendasService
+participant DomainEventPublisher as Subject
+participant ConsoleLogObserver
+participant InMemoryEventsObserver
+
+PrendasService -> Subject: notify(evento prenda.estado.actualizado)
+Subject -> ConsoleLogObserver: update(evento)
+Subject -> InMemoryEventsObserver: update(evento)
+@enduml

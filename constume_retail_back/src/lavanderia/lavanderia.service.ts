@@ -1,46 +1,39 @@
-import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ListaLavanderia } from './lista-lavanderia.entity';
 import { AgregarLavanderiaDto } from './dto/agregar-lavanderia.dto';
 import { EnviarPrendasDto } from './dto/enviar-prendas.dto';
 import { PrendasService } from '../prendas/prendas.service';
-import { EstadoPrenda } from '../prendas/prenda.entity';
+import { LavanderiaCommandInvoker } from './commands/lavanderia-command-invoker';
+import { AgregarPrendaLavanderiaCommand } from './commands/agregar-prenda-lavanderia.command';
+import { EnviarPrendasLavanderiaCommand } from './commands/enviar-prendas-lavanderia.command';
+import { DomainEventPublisher } from '../patrones/observer/domain-event.publisher';
+import { SeleccionEnvioStrategy } from './strategy/seleccion-envio.strategy';
+import { PrioridadFifoStrategy } from './strategy/prioridad-fifo.strategy';
+import { FifoStrategy } from './strategy/fifo.strategy';
+import { ModoEnvioLavanderia } from './dto/modo-envio.enum';
 
 @Injectable()
 export class LavanderiaService {
+  private readonly invoker = new LavanderiaCommandInvoker();
+
   constructor(
     @InjectRepository(ListaLavanderia)
     private readonly lavanderiaRepository: Repository<ListaLavanderia>,
     private readonly prendasService: PrendasService,
+    private readonly domainEventPublisher: DomainEventPublisher,
   ) {}
 
   async agregar(dto: AgregarLavanderiaDto): Promise<ListaLavanderia> {
-    const prenda = await this.prendasService.findByReferencia(dto.referencia);
-
-    if (prenda.estado === EstadoPrenda.EN_LAVANDERIA) {
-      throw new BadRequestException(
-        `La prenda "${dto.referencia}" ya se encuentra en la lista de lavandería`,
-      );
-    }
-
-    // Actualizar estado de la prenda
-    await this.prendasService.updateEstado(
-      dto.referencia,
-      EstadoPrenda.EN_LAVANDERIA,
+    const command = new AgregarPrendaLavanderiaCommand(
+      this.lavanderiaRepository,
+      this.prendasService,
+      this.domainEventPublisher,
+      dto,
     );
 
-    const registro = this.lavanderiaRepository.create({
-      prenda,
-      prioridad: dto.prioridad ?? false,
-      enviada: false,
-    });
-
-    return this.lavanderiaRepository.save(registro);
+    return this.invoker.execute(command);
   }
 
   async findPendientes(): Promise<ListaLavanderia[]> {
@@ -59,33 +52,22 @@ export class LavanderiaService {
     cantidad_enviada: number;
     prendas_enviadas: ListaLavanderia[];
   }> {
-    const pendientes = await this.lavanderiaRepository.find({
-      where: { enviada: false },
-      relations: ['prenda'],
-      order: {
-        prioridad: 'DESC',
-        fecha_registro: 'ASC',
-      },
-    });
+    const command = new EnviarPrendasLavanderiaCommand(
+      this.lavanderiaRepository,
+      this.domainEventPublisher,
+      dto,
+      this.resolveStrategy(dto.estrategia),
+    );
 
-    if (pendientes.length === 0) {
-      throw new NotFoundException(
-        'No hay prendas pendientes de envío a lavandería',
-      );
+    return this.invoker.execute(command);
+  }
+
+  private resolveStrategy(
+    estrategia?: ModoEnvioLavanderia,
+  ): SeleccionEnvioStrategy {
+    if (estrategia === ModoEnvioLavanderia.FIFO) {
+      return new FifoStrategy();
     }
-
-    const cantidadReal = Math.min(dto.cantidad, pendientes.length);
-    const aEnviar = pendientes.slice(0, cantidadReal);
-
-    for (const item of aEnviar) {
-      item.enviada = true;
-      await this.lavanderiaRepository.save(item);
-    }
-
-    return {
-      mensaje: `Se enviaron ${cantidadReal} prenda(s) a lavandería exitosamente`,
-      cantidad_enviada: cantidadReal,
-      prendas_enviadas: aEnviar,
-    };
+    return new PrioridadFifoStrategy();
   }
 }
